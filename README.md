@@ -21,13 +21,13 @@ splunkrepl works both in an interactive REPL mode and as a non-interactive execu
 
 ### Options
 
-|Argument|Required|Description
-------------------------------
---host   |X |Splunk host to connect to including the port, ex. "https://localhost:8089"               
---user   |X |Splunk user to connect with                                                              
---pwd    |X |Password for the Splunk Account                                                          
---query  |  |SPL query to immediately execute. Runs in non-interactive mode                           
---verbose|  |Return as much detail as possible within each event                                      
+Argument  | Required | Description
+--------  | -------- | -----------------
+--host    | X        | Splunk host to connect to including the port, ex. "https://localhost:8089"               
+--user    | X        | Splunk user to connect with                                                              
+--pwd     | X        | Password for the Splunk Account                                                          
+--query   |          | SPL query to immediately execute. Runs in non-interactive mode                           
+--verbose |          | Return as much detail as possible within each event                                      
 
 ## License
 Apache 2
