@@ -6,8 +6,8 @@ An awesome little REPL for issuing SPLUNK queries
 ## What is it?
 splunkrepl is an interactive tool for issuing Splunk queries right from the terminal!
 
-## Installing
-`npm install -g splunkrepl`
+## Installing (not on npm yet)
+`npm install -g https://github.com/glennblock/splunkrepl/tarball/master`
 
 ## How to use it
 splunkrepl works both in an interactive REPL mode and as a non-interactive executor.
