@@ -27,7 +27,12 @@ Argument  | Required | Description
 --user    | X        | Splunk user to connect with                                                              
 --pwd     | X        | Password for the Splunk Account                                                          
 --query   |          | SPL query to immediately execute. Runs in non-interactive mode                           
---verbose |          | Return as much detail as possible within each event                                      
+--verbose |          | Return as much detail as possible within each event (see below)                                       
+
+## Verbose mode
+By default when queries run, splunkrepl will return only _time, source, sourcetype, host and _raw (if available) fields. To get all the details specify `--verbose` and you will get output similar to below:
+
+![ScreenShot](https://raw.github.com/glennblock/splunkrepl/screenshots/verbose.png)
 
 ## License
 Apache 2
