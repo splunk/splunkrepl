@@ -13,7 +13,8 @@ splunkrepl is an interactive tool for issuing Splunk queries right from the term
 splunkrepl works both in an interactive REPL mode and as a non-interactive executor.
 
 ### REPL 
-* Run "splunkrepl" at the terminal, passing in required params of `--host`, `--user` and `--pwd`.
+* Run "splunkrepl" at the terminal, passing in optional params of `--host`, `--user` and `--pwd`.
+* To set / change the connection within the REPL, use :connect i.e. `:connect https://localhost:8089 admin changeme`
 * Type any valid SPL query and hit enter. Your results will get returned.
 
 ### Non-Interactive
