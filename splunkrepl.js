@@ -44,6 +44,14 @@ function createService(host, user, pwd) {
 }
 
 function eval(cmd, context, filename, callback) {
+    cb = callback;
+
+    callback = function(msg) {
+        if (msg != undefined) {
+            console.log(msg);
+        }
+        process.stdout.write("spl query>");
+    }
     cmd = cmd.substring(0, cmd.length -1);
     if (cmd === "?" || cmd === "help") {
         console.log("commands:");
@@ -92,6 +100,10 @@ function doQuery(query, callback) {
             });
         },
         function(results, job, done) {
+            if (results.rows.length == 0) {
+                console.log("-- NO RESULTS --".yellow);
+                return done();
+            }
             var fields={};
             
             fields["_time"] = results.fields.indexOf("_time");
@@ -134,7 +146,8 @@ if (query != undefined) {
 }
 else {
     var local = repl.start({
-        "prompt":"spl query>",
+        "prompt":"",
         "eval":eval
     });
+    process.stdout.write("spl query>");
 }
