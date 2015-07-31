@@ -24,22 +24,6 @@ function checkArgs() {
         console.log("\t--verbose - (optional) Output all event metadata".white.bold);
         process.exit();
     }
-
-    if (query != undefined) {
-        if (host == undefined) {
-            console.log("'host' is required".red);
-            process.exit();
-        }
-
-        if (user == undefined) {
-            console.log("'user' is required".red);
-        }
-
-        if (pwd == undefined) {
-            console.log("'pwd' is required".red);
-            process.exit();
-        }
-    }
 }
 
 checkArgs();
