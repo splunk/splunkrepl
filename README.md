@@ -22,13 +22,13 @@ splunkrepl works both in an interactive REPL mode and as a non-interactive execu
 
 ### Options
 
-Argument  | Required | Description
---------  | -------- | -----------------
---host    | X        | Splunk host to connect to including the port, ex. "https://localhost:8089"               
---user    | X        | Splunk user to connect with                                                              
---pwd     | X        | Password for the Splunk Account                                                          
---query   |          | SPL query to immediately execute. Runs in non-interactive mode                           
---verbose |          | Return as much detail as possible within each event (see below)                                       
+Argument  |  Description
+--------  |  -----------------
+--host    |  Splunk host to connect to including the port, ex. "https://localhost:8089"               
+--user    |  Splunk user to connect with                                                              
+--pwd     |  Password for the Splunk Account                                                          
+--query   |  SPL query to immediately execute. Runs in non-interactive mode                           
+--verbose |  Return as much detail as possible within each event (see below)                                       
 
 ## Verbose mode
 By default when queries run, splunkrepl will return only _time, source, sourcetype, host and _raw (if available) fields. To get all the details specify `--verbose` and you will get output similar to below:
