@@ -10,6 +10,8 @@ var host = argv.host;
 var user = argv.user;
 var pwd = argv.pwd;
 var query = argv.query;
+var verbose = argv.verbose;
+var self = this;
 
 function checkArgs() {
     var firstParam = process.argv[2];
@@ -23,29 +25,28 @@ function checkArgs() {
         process.exit();
     }
 
-    if (host == undefined) {
-        console.log("'host' is required".red);
-        process.exit();
-    }
+    if (query != undefined) {
+        if (host == undefined) {
+            console.log("'host' is required".red);
+            process.exit();
+        }
 
-    if (user == undefined) {
-        console.log("'user' is required".red);
-    }
+        if (user == undefined) {
+            console.log("'user' is required".red);
+        }
 
-    if (pwd == undefined) {
-        console.log("'pwd' is required".red);
-        process.exit();
+        if (pwd == undefined) {
+            console.log("'pwd' is required".red);
+            process.exit();
+        }
     }
 }
 
 checkArgs();
 
-var verbose = argv.verbose;
-var parsed = url.parse(host);
-var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1)
-
-function eval(cmd, context, filename, callback) {
-    var search = 'search ' + cmd.substring(1, cmd.length-1);
+function createService(host, user, pwd) {
+    var parsed = url.parse(host);
+    var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1)
 
     var service = new splunk.Service({
         host:parsed.hostname,
@@ -55,12 +56,51 @@ function eval(cmd, context, filename, callback) {
         port:parsed.port
     }); 
 
+    return service;
+}
+
+function eval(cmd, context, filename, callback) {
+    cmd = cmd.substring(0, cmd.length -1);
+    if (cmd === "?" || cmd === "help") {
+        console.log("commands:");
+        console.log("  :connect [host] [user] [pwd] - set the connection");
+        console.log("  :quit / ctrl-c - exit the repl");
+        return callback(" ");
+    }
+
+    if (cmd.substring(0, 8) == ":connect" ) {
+        var conn = cmd.split(" ");
+        host = conn[1];
+        user = conn[2];
+        pwd = conn[3];
+
+        self.service = createService(host, user, pwd);
+        return callback("Connection set");
+    }
+    
+    if (cmd == ":quit") {
+        process.exit();
+    }
+
+    if (host == undefined) {
+        return callback("Connection not set, use :connect");
+    }
+    doQuery(cmd, callback);
+}
+
+function doQuery(query, callback) {
+    if (self.service == undefined) {
+        self.service = createService(host, user, pwd);
+    }
+
+    var search = 'search ' + query;
+
     Async.chain([
         function(done) {
-            service.login(done);
+            self.service.login(done);
         },
         function(success, done) {
-            service.search(search, {}, done);
+            self.service.search(search, {}, done);
         },
         function(job, done) {
             job.track({}, function(job) {
@@ -76,8 +116,7 @@ function eval(cmd, context, filename, callback) {
                 if (fieldName != "_time")
                     fields[fieldName] = index;
             });
-
-            
+   
             if (!verbose) {
                 delete fields['_bkt'];
                 delete fields['_si'];
@@ -101,11 +140,11 @@ function eval(cmd, context, filename, callback) {
         }]
     , function(err) {
         return callback(" ");
-    });
+    });    
 }
 
 if (query != undefined) {
-    eval('(' + query + ')',null,null,function(result) {
+    eval(query,null,null,function(result) {
         console.log(result);;
     });
 }
@@ -113,5 +152,5 @@ else {
     var local = repl.start({
         "prompt":"spl query>",
         "eval":eval
-        });
+    });
 }
