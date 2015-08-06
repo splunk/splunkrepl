@@ -11,6 +11,8 @@ var user = argv.user;
 var pwd = argv.pwd;
 var query = argv.query;
 var verbose = argv.verbose;
+var hosted = argv.hosted;
+var useJson = argv.json;
 var self = this;
 
 function checkArgs() {
@@ -20,8 +22,9 @@ function checkArgs() {
         console.log("\t--host - Splunk's host".white.bold)
         console.log("\t--user - Splunk user".white.bold);
         console.log("\t--pwd - Splunk password".white.bold);
-        console.log("\t--query - (optional) SPL Query (runs in non-interactive)".white.bold);
-        console.log("\t--verbose - (optional) Output all event metadata".white.bold);
+        console.log("\t--query - SPL Query (runs in non-interactive)".white.bold);
+        console.log("\t--verbose - Output all event metadata".white.bold);
+        console.log("\t--json - Output in raw json")
         process.exit();
     }
 }
@@ -53,10 +56,12 @@ function eval(cmd, context, filename, callback) {
         process.stdout.write("spl query>");
     }
     cmd = cmd.substring(0, cmd.length -1);
+
     if (cmd === "?" || cmd === "help") {
         console.log("commands:");
         console.log("  :connect [host] [user] [pwd] - set the connection");
-        console.log("  :quit / ctrl-c - exit the repl");
+        console.log("  :cls - clear the screen")
+        console.log("  :exit / ctrl-c - exit the repl");
         return callback(" ");
     }
 
@@ -70,7 +75,15 @@ function eval(cmd, context, filename, callback) {
         return callback("Connection set");
     }
     
-    if (cmd == ":quit") {
+    if (cmd == ":cls") {
+        //clear the screen
+        //kudos to @laktak http://stackoverflow.com/a/14976765/18419
+        process.stdout.write("\u001b[2J\u001b[0;0H");
+        process.stdout.write("spl query>")
+        return;
+    }
+
+    if (cmd == ":exit") {
         process.exit();
     }
 
@@ -101,6 +114,10 @@ function doQuery(query, callback) {
         },
         function(results, job, done) {
             if (results.rows.length == 0) {
+                if (useJson) {
+                    console.log("[]");
+                    return done();
+                }
                 console.log("-- NO RESULTS --".yellow);
                 return done();
             }
@@ -116,25 +133,40 @@ function doQuery(query, callback) {
             if (!verbose) {
                 delete fields['_bkt'];
                 delete fields['_si'];
-                delete fields['_cd'];
+                delete  fields['_cd'];
                 delete fields['_indextime'];
                 delete fields['_serial'];
                 delete fields['linecount'];
                 delete fields['_sourcetype'];
                 delete fields['splunk_server'];
             }
-            
+            var events=[];
             results.rows.forEach(function(result){
                 var event = {};
                 for(var fieldName in fields) {
                     event[fieldName] = result[fields[fieldName]];
                 }
-                console.log("\n" + prettyjson.render(event));
-                console.log("---------------------------------------------".grey);
+                if (useJson) {
+                    events.push(event);
+                }
+                else {
+                    console.log("\n" + prettyjson.render(event));
+                    console.log("---------------------------------------------".grey);
+                }
             });
+            if (useJson && events.length > 0) {
+                console.log("here");
+                console.log(JSON.stringify(events, null, 2));
+            }
             done();
         }]
     , function(err) {
+        if (err) {
+            if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
+                return callback("Error: Connection refused");
+            }
+            return callback(err);
+        }
         return callback(" ");
     });    
 }
@@ -146,8 +178,11 @@ if (query != undefined) {
 }
 else {
     var local = repl.start({
-        "prompt":"",
+        "prompt":hosted == true ? "" : "spl query>",
         "eval":eval
     });
-    process.stdout.write("spl query>");
+    if (hosted) 
+    {
+        process.stdout.write("spl query>");
+    }
 }
