@@ -7,3 +7,6 @@
 * Added support for rendering tables for stats (#1)
 * Added --json switch (#2)
 * Added :cls command (#3)
+
+## 0.2.1
+* Added color coding and better error handling
