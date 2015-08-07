@@ -34,6 +34,7 @@ Argument  |  Description
 
 ## Tables
 When the results that are returned are calculated (do not have _raw) such as from stats or table, then a table view will be displayed:
+
 ![ScreenShot](https://raw.github.com/glennblock/splunkrepl/screenshots/table.png)
 
 ## Verbose mode
