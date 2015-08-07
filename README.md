@@ -45,5 +45,5 @@ By default when queries run, splunkrepl will return only _time, source, sourcety
 ## License
 Apache 2
 
-## Change log
-Checkl [here](https://github.com/glennblock/splunkrepl/blob/master/changelog.md)
+## Release notes
+Check the change log [here](https://github.com/glennblock/splunkrepl/blob/master/changelog.md)
