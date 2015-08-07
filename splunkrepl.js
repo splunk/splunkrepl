@@ -54,15 +54,15 @@ function eval(cmd, context, filename, callback) {
         if (msg != undefined) {
             console.log(msg);
         }
-        process.stdout.write("spl query>");
+        process.stdout.write("spl query>".green);
     }
     cmd = cmd.substring(0, cmd.length -1);
 
     if (cmd === "?" || cmd === "help") {
-        console.log("commands:");
-        console.log("  :connect [host] [user] [pwd] - set the connection");
-        console.log("  :cls - clear the screen")
-        console.log("  :exit / ctrl-c - exit the repl");
+        console.log("commands:".white.bold);
+        console.log("  :connect [host] [user] [pwd] - set the connection".white.bold);
+        console.log("  :cls - clear the screen".white.bold)
+        console.log("  :exit / ctrl-c - exit the repl".white.bold);
         return callback(" ");
     }
 
@@ -73,14 +73,14 @@ function eval(cmd, context, filename, callback) {
         pwd = conn[3];
 
         self.service = createService(host, user, pwd);
-        return callback("Connection set");
+        return callback("Connection set".yellow.bold);
     }
     
     if (cmd == ":cls") {
         //clear the screen
         //kudos to @laktak http://stackoverflow.com/a/14976765/18419
         process.stdout.write("\u001b[2J\u001b[0;0H");
-        process.stdout.write("spl query>")
+        process.stdout.write("spl query>".green.bold)
         return;
     }
 
@@ -88,8 +88,12 @@ function eval(cmd, context, filename, callback) {
         process.exit();
     }
 
+    if (cmd.indexOf(":")==0) {
+        return callback("Invalid command, type 'help' to see valid commands".red.bold)
+    }
+
     if (host == undefined) {
-        return callback("Connection not set, use :connect");
+        return callback("Connection not set, use :connect".red.bold);
     }
     doQuery(cmd, callback);
 }
@@ -189,9 +193,9 @@ function doQuery(query, callback) {
     , function(err) {
         if (err) {
             if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
-                return callback("Error: Connection refused".red);
+                return callback("Error: Connection refused".red.bold);
             }
-            return callback(err.red);
+            return callback(err.red.bold);
         }
         return callback(" ");
     });    
@@ -204,11 +208,11 @@ if (query != undefined) {
 }
 else {
     var local = repl.start({
-        "prompt":hosted == true ? "" : "spl query>",
+        "prompt":hosted == true ? "" : "spl query>".green,
         "eval":eval
     });
     if (hosted) 
     {
-        process.stdout.write("spl query>");
+        process.stdout.write("spl query>".green);
     }
 }
