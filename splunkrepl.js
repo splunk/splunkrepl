@@ -80,7 +80,7 @@ function eval(cmd, context, filename, callback) {
         //clear the screen
         //kudos to @laktak http://stackoverflow.com/a/14976765/18419
         process.stdout.write("\u001b[2J\u001b[0;0H");
-        process.stdout.write("spl query>".green.bold)
+        process.stdout.write("spl query>".green)
         return;
     }
 
