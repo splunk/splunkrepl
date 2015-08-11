@@ -1,5 +1,5 @@
 # splunkrepl
-An awesome little REPL for issuing SPLUNK queries
+An awesome little REPL for issuing Splunk queries
 
 ![ScreenShot](https://raw.github.com/glennblock/splunkrepl/screenshots/repl.png)
 
@@ -38,12 +38,12 @@ When the results that are returned are calculated (do not have _raw) such as fro
 ![ScreenShot](https://raw.github.com/glennblock/splunkrepl/screenshots/table.png)
 
 ## Verbose mode
-By default when queries run, splunkrepl will return only _time, source, sourcetype, host and _raw (if available) fields. To get all the details specify `--verbose` and you will get output similar to below:
+By default when queries run, splunkrepl will return only `_time`, `source`, `sourcetype`, `host` and `_raw` (if available) fields. To get all the details specify `--verbose` and you will get output similar to below:
 
 ![ScreenShot](https://raw.github.com/glennblock/splunkrepl/screenshots/verbose.png)
 
 ## License
-Apache 2
+splunkrepl is licensed under the Apache License 2.0. Details can be found in the file LICENSE.
 
 ## Release notes
 Check the change log [here](https://github.com/glennblock/splunkrepl/blob/master/changelog.md)
