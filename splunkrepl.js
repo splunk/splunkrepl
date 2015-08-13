@@ -34,8 +34,11 @@ checkArgs();
 
 function createService(host, user, pwd) {
     var parsed = url.parse(host);
-    var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1)
+    if (parsed.protocol == undefined) {
+        parsed = {hostname:host, protocol:"https:", port:"8089"};
+    }
 
+    var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1)
     var service = new splunk.Service({
         host:parsed.hostname,
         scheme:scheme,
@@ -60,7 +63,7 @@ function eval(cmd, context, filename, callback) {
 
     if (cmd === "?" || cmd === "help") {
         console.log("commands:".white.bold);
-        console.log("  :connect [host] [user] [pwd] - set the connection".white.bold);
+        console.log("  :connect [host] [user] [pwd] - set the connection.\r\n\texample - :connect https://localhost:8089 admin changeme".white.bold);
         console.log("  :cls - clear the screen".white.bold)
         console.log("  :exit / ctrl-c - exit the repl".white.bold);
         return callback(" ");
@@ -68,12 +71,26 @@ function eval(cmd, context, filename, callback) {
 
     if (cmd.substring(0, 8) == ":connect" ) {
         var conn = cmd.split(" ");
+        if (conn.length != 4) {
+            return callback("Invalid arguments, must provide [host] [user] [pwd].\r\n\texample - :connect https://localhost:8089 admin changeme".red.bold);
+        }
         host = conn[1];
         user = conn[2];
         pwd = conn[3];
 
         self.service = createService(host, user, pwd);
-        return callback("Connection set".yellow.bold);
+        self.service.login(function(err, success) {
+            if (!success) {
+                if (err.status == "401") {
+                    return callback("Invalid username or password".red.bold);
+                }
+                return callback(JSON.stringify(err,null,2).red.bold);
+            }
+            else {
+                return callback(("Connection set to " + self.service.scheme + ":" + self.service.host + "//:" + self.service.port).yellow.bold);
+            }
+        })
+        return;
     }
     
     if (cmd == ":cls") {
@@ -195,7 +212,7 @@ function doQuery(query, callback) {
             if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
                 return callback("Error: Connection refused".red.bold);
             }
-            return callback(err.red.bold);
+            return callback(JSON.stringify(err,null,2).red.bold);
         }
         return callback(" ");
     });    
