@@ -13,3 +13,6 @@
 
 ## 0.2.2
 * Added better error handling for :connect. Also added defaults, so :connect localhost admin changeme will assume port 8089 and https:
+
+## 0.2.3
+* Added better error message if connection cannot be made
