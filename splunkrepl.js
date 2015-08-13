@@ -38,18 +38,16 @@ function createService(host, user, pwd) {
     }
 
     var parsed = url.parse(host);
-    console.log(parsed);
+
     if (parsed.protocol == null) {
         parsed.protocol = "https:";
 
     }
-    console.log(parsed.protocol)
 
     if (parsed.port == null) {
         parsed.port = "8089";
     }
-    console.log(parsed.port);
-
+    
     var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1);
     
     var service = new splunk.Service({
