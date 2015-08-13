@@ -10,3 +10,6 @@
 
 ## 0.2.1
 * Added color coding and better error handling
+
+## 0.2.2
+* Added better error handling for :connect. Also added defaults, so :connect localhost admin changeme will assume port 8089 and https:

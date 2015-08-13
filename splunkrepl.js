@@ -33,12 +33,25 @@ function checkArgs() {
 checkArgs();
 
 function createService(host, user, pwd) {
-    var parsed = url.parse(host);
-    if (parsed.protocol == undefined) {
-        parsed = {hostname:host, protocol:"https:", port:"8089"};
+    if (host.toLowerCase().indexOf("http") == -1) {
+        host = "https://" + host;
     }
 
-    var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1)
+    var parsed = url.parse(host);
+    console.log(parsed);
+    if (parsed.protocol == null) {
+        parsed.protocol = "https:";
+
+    }
+    console.log(parsed.protocol)
+
+    if (parsed.port == null) {
+        parsed.port = "8089";
+    }
+    console.log(parsed.port);
+
+    var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1);
+    
     var service = new splunk.Service({
         host:parsed.hostname,
         scheme:scheme,
