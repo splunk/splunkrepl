@@ -47,7 +47,7 @@ function createService(host, user, pwd) {
     if (parsed.port == null) {
         parsed.port = "8089";
     }
-    
+
     var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1);
     
     var service = new splunk.Service({
@@ -94,6 +94,9 @@ function eval(cmd, context, filename, callback) {
             if (!success) {
                 if (err.status == "401") {
                     return callback("Invalid username or password".red.bold);
+                }
+                else if (err.status == "600") {
+                    return callback("Connection refused, check that Splunk is started and the port is correct".red.bold);
                 }
                 return callback(JSON.stringify(err,null,2).red.bold);
             }
@@ -221,7 +224,7 @@ function doQuery(query, callback) {
     , function(err) {
         if (err) {
             if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
-                return callback("Error: Connection refused".red.bold);
+                return callback("Connection refused, check that Splunk is started and the port is correct".red.bold);
             }
             return callback(JSON.stringify(err,null,2).red.bold);
         }
