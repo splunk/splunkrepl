@@ -1,6 +1,6 @@
 {
   "name": "splunkrepl",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "a node repl for sending SPL queries to Splunk",
   "author": "Glenn Block",
   "license": "Apache 2",
