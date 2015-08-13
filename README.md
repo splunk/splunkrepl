@@ -14,7 +14,7 @@ splunkrepl works both in an interactive REPL mode and as a non-interactive execu
 
 ### REPL 
 * Run "splunkrepl" at the terminal, passing in optional params of `--host`, `--user` and `--pwd`.
-* To set / change the connection within the REPL, use :connect i.e. `:connect https://localhost:8089 admin changeme`
+* To set / change the connection within the REPL, use :connect i.e. `:connect https://localhost:8089 admin changeme`. If port is 8089 and scheme is https, you can just put the host i.e. `:connect localhost admin changeme` will work.
 * Type any valid SPL query and hit enter. Your results will get returned.
 * To clear the REPL screen, use :cls
 
