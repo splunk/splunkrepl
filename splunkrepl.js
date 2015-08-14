@@ -2,6 +2,7 @@ var repl = require("repl")
  , splunk = require('splunk-sdk')
  , prettyjson = require('prettyjson')
  , url = require('url')
+ , open = require('open')
  , Async = splunk.Async
  , colors = require('colors')
  , Table = require('cli-table');
@@ -47,7 +48,7 @@ function createService(host, user, pwd) {
     if (parsed.port == null) {
         parsed.port = "8089";
     }
-
+    
     var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1);
     
     var service = new splunk.Service({
@@ -75,8 +76,9 @@ function eval(cmd, context, filename, callback) {
     if (cmd === "?" || cmd === "help") {
         console.log("commands:".white.bold);
         console.log("  :connect [host] [user] [pwd] - set the connection.\r\n\texample - :connect https://localhost:8089 admin changeme".white.bold);
+        console.log("  :web [query] - sends a query to the Splunk UI. If query is not specified, uses the last query".white.bold);
         console.log("  :cls - clear the screen".white.bold)
-        console.log("  :exit / ctrl-c - exit the repl".white.bold);
+        console.log("  :exit / ctrl-c - exit the repl".white.bold)
         return callback(" ");
     }
 
@@ -94,35 +96,42 @@ function eval(cmd, context, filename, callback) {
             if (!success) {
                 if (err.status == "401") {
                     return callback("Invalid username or password".red.bold);
-                }
+                } 
                 else if (err.status == "600") {
-                    return callback("Connection refused, check that Splunk is started and the port is correct".red.bold);
+                    return callback("Connection refused, check Splunk is started and the port is correct")
                 }
                 return callback(JSON.stringify(err,null,2).red.bold);
             }
             else {
-                return callback(("Connection set to " + self.service.scheme + ":" + self.service.host + "//:" + self.service.port).yellow.bold);
+                return callback(("Connection set to " + self.service.scheme + "://" + self.service.host + ":" + self.service.port).yellow.bold);
             }
         })
         return;
-    }
-    
-    if (cmd == ":cls") {
+    } 
+    else if (cmd == ":cls") {
         //clear the screen
         //kudos to @laktak http://stackoverflow.com/a/14976765/18419
         process.stdout.write("\u001b[2J\u001b[0;0H");
         process.stdout.write("spl query>".green)
         return;
     }
-
-    if (cmd == ":exit") {
+    else if (cmd == ":exit") {
         process.exit();
     }
-
-    if (cmd.indexOf(":")==0) {
+    else if (cmd.substring(0, 4) == ":web") {
+        var search = cmd.substring(4).trim();
+        if (search == "") {
+            search = self.lastSearch;
+        }
+        if (self.service == undefined) {
+            return callback("Connection not set, use :connect".red.bold);
+        }
+        open("http://" + self.service.host + ":8000/en-US/app/search/search?q=search " + search);
+        return callback("");   
+    }
+    else if (cmd.indexOf(":")==0) {
         return callback("Invalid command, type 'help' to see valid commands".red.bold)
     }
-
     if (host == undefined) {
         return callback("Connection not set, use :connect".red.bold);
     }
@@ -135,7 +144,7 @@ function doQuery(query, callback) {
     }
 
     var search = 'search ' + query;
-
+    self.lastSearch = query;
     Async.chain([
         function(done) {
             self.service.login(done);
@@ -224,7 +233,7 @@ function doQuery(query, callback) {
     , function(err) {
         if (err) {
             if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
-                return callback("Connection refused, check that Splunk is started and the port is correct".red.bold);
+                return callback("Error: Connection refused".red.bold);
             }
             return callback(JSON.stringify(err,null,2).red.bold);
         }
