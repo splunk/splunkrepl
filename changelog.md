@@ -16,3 +16,6 @@
 
 ## 0.2.3
 * Added better error message if connection cannot be made
+
+## 0.2.4
+* Added :web (#10)
