@@ -1,21 +1,21 @@
 var repl = require("repl")
+ , path = require('path')
+ , fs = require('fs')
  , splunk = require('splunk-sdk')
  , prettyjson = require('prettyjson')
  , url = require('url')
  , open = require('open')
  , Async = splunk.Async
  , colors = require('colors')
- , Table = require('cli-table');
+ , Table = require('cli-table')
+ , nconf = require('nconf');
 
+var self = this;
 var argv = require('minimist')(process.argv.slice(2));
-var host = argv.host;
-var user = argv.user;
-var pwd = argv.pwd;
 var query = argv.query;
 var verbose = argv.verbose;
 var hosted = argv.hosted;
 var useJson = argv.json;
-var self = this;
 
 function checkArgs() {
     var firstParam = process.argv[2];
@@ -31,22 +31,20 @@ function checkArgs() {
     }
 }
 
-checkArgs();
-
 function createService(host, user, pwd) {
     if (host.toLowerCase().indexOf("http") == -1) {
-        host = "https://" + host;
+        host = nconf.get('scheme') + '://' + host;
     }
 
     var parsed = url.parse(host);
 
     if (parsed.protocol == null) {
-        parsed.protocol = "https:";
+        parsed.protocol = nconf.get('scheme') + ':';
 
     }
 
     if (parsed.port == null) {
-        parsed.port = "8089";
+        parsed.port = nconf.get('port');
     }
     
     var scheme = parsed.protocol.substring(0, parsed.protocol.length - 1);
@@ -62,85 +60,184 @@ function createService(host, user, pwd) {
     return service;
 }
 
+function cmd_help(callback) {
+    console.log("commands: () = optional".white.bold);
+    console.log("  :connect (host) (user) (pwd) - set the connection.\r\n    example - :connect https://localhost:8089 admin changeme".white.bold);
+    console.log("  :web (query) - sends a query to the Splunk UI. If query is not specified, uses the last query".white.bold);
+    console.log("  :web-port [port] - specify the default web port to use\r\n    example - :web-port 9000".white.bold);
+    console.log("  :get [key] - retrieves [key] from global config and executes it".white.bold);
+    console.log("  :set - [key] [value] sets the key in the global config".white.bold);
+    console.log("  :save - persists any in memory changes to the global config".white.bold);
+    console.log("  :cls - clear the screen".white.bold);
+    console.log("  :exit / ctrl-c - exit the repl".white.bold);
+    return callback();    
+}
+
+function cmd_connect(cmd, callback) {
+    var host=nconf.get("host");
+    var user=nconf.get("user");
+    var pwd=nconf.get("pwd");
+    var conn = cmd.split(" ");
+
+    if (conn.length >= 2) {
+        host = conn[1];
+    }
+
+    if (conn.length >= 3) {
+        user = conn[2];
+    }
+
+    if (conn.length == 4) {
+        pwd = conn[3];
+    }
+
+    if (conn.length > 4) {
+        return callback("Invalid arguments, syntax - :connect (host) (user) (pwd).\r\n\texample - :connect localhost admin changeme".red.bold);
+    }
+
+    self.service = createService(host, user, pwd);
+
+    self.service.login(function(err, success) {
+        if (!success) {
+            handleError(err, callback);
+        }
+        else {
+            return callback(("\r\nConnection set to " + self.service.scheme + "://" + self.service.host + ":" + self.service.port).yellow.bold);
+        }
+    })
+    return callback();
+}
+
+function cmd_get(cmd, context,filename, callback) {
+    var args = cmd.split(" ");
+    if (args.length > 2) {
+        return callback("Invalid arguments, syntax - :get [key]".red.bold);
+    }
+    var key = args[1];
+    var val = nconf.get(args[1]);
+    if (val != undefined) {
+        console.log(val);
+        return eval(val + ' ', context, filename, callback);        
+    }
+    else {
+        return callback(" ");
+    }
+}
+
+function cmd_set(cmd, callback) {
+    var args = cmd.split(" ");
+    var key = args[1];
+    var val = cmd.substring(5 + key.length + 1);
+    nconf.set(key, val);
+    return callback(" ");
+}
+
+function cmd_list(cmd, callback) {
+    var store = nconf.stores.file.store;
+    var table = new Table({head:['key'.cyan.bold, 'value'.cyan.bold]});
+    var keys = [];
+
+    for(var key in store) {
+        keys.push(key);
+    }
+
+    keys.sort().forEach(function(key) {
+        table.push([key.white.bold, store[key].toString().white.bold]);
+    });
+
+    console.log(table.toString())
+    return callback(" ");
+}
+
+function cmd_save(cmd, callback) {
+    nconf.save(function(err) {
+        if (err != undefined) {
+            callback(err);
+        }
+        callback("Configuration saved".yellow.bold);
+    });
+}
+
+function cmd_cls(callback) {
+    //clear the screen
+    //kudos to @laktak http://stackoverflow.com/a/14976765/18419
+    process.stdout.write("\u001b[2J\u001b[0;0H");
+    return callback();
+}
+
+function cmd_port(cmd, callback) {
+    var args = cmd.split(" ");
+    if (args.length != 2) {
+        return callback("Invalid arguments, syntax - :web-port [port]".red.bold);
+    }
+    nconf.set('webport', args[1]);
+    return callback(("Web port set to " + args[1]).yellow.bold);
+}
+
+function cmd_web(cmd, callback) {
+    var search = cmd.substring(4).trim();
+    if (search == "") {
+        search = self.lastSearch;
+    }
+    if (self.service == undefined) {
+        return callback("Connection not set, use :connect".red.bold);
+    }
+    open("http://" + self.service.host + ":" + nconf.get('webport') + "/en-US/app/search/search?q=search " + search);
+    return callback();   
+}
+
 function eval(cmd, context, filename, callback) {
     cb = callback;
-
     callback = function(msg) {
         if (msg != undefined) {
             console.log(msg);
         }
         process.stdout.write("spl query>".green);
     }
+
     cmd = cmd.substring(0, cmd.length -1);
 
-    if (cmd === "?" || cmd === "help") {
-        console.log("commands:".white.bold);
-        console.log("  :connect [host] [user] [pwd] - set the connection.\r\n\texample - :connect https://localhost:8089 admin changeme".white.bold);
-        console.log("  :web [query] - sends a query to the Splunk UI. If query is not specified, uses the last query".white.bold);
-        console.log("  :cls - clear the screen".white.bold)
-        console.log("  :exit / ctrl-c - exit the repl".white.bold)
-        return callback(" ");
+    if (cmd === "?" || cmd === ":help") {
+        cmd_help();
     }
-
-    if (cmd.substring(0, 8) == ":connect" ) {
-        var conn = cmd.split(" ");
-        if (conn.length != 4) {
-            return callback("Invalid arguments, must provide [host] [user] [pwd].\r\n\texample - :connect https://localhost:8089 admin changeme".red.bold);
-        }
-        host = conn[1];
-        user = conn[2];
-        pwd = conn[3];
-
-        self.service = createService(host, user, pwd);
-        self.service.login(function(err, success) {
-            if (!success) {
-                if (err.status == "401") {
-                    return callback("Invalid username or password".red.bold);
-                } 
-                else if (err.status == "600") {
-                    return callback("Connection refused, check Splunk is started and the port is correct")
-                }
-                return callback(JSON.stringify(err,null,2).red.bold);
-            }
-            else {
-                return callback(("Connection set to " + self.service.scheme + "://" + self.service.host + ":" + self.service.port).yellow.bold);
-            }
-        })
-        return;
+    else if (cmd.substring(0, 8) == ":connect" ) {
+        cmd_connect(cmd, callback);
     } 
+    else if (cmd.substring(0,4) == ":get") {
+        cmd_get(cmd, context, filename, callback);
+    }
+    else if (cmd.substring(0,4) == ":set") {
+        cmd_set(cmd, callback);
+    }
+    else if (cmd == ":list") {
+        cmd_list(cmd, callback);
+    }
+    else if (cmd == ":save") {
+        cmd_save(cmd, callback);
+    }
     else if (cmd == ":cls") {
-        //clear the screen
-        //kudos to @laktak http://stackoverflow.com/a/14976765/18419
-        process.stdout.write("\u001b[2J\u001b[0;0H");
-        process.stdout.write("spl query>".green)
-        return;
+        cmd_cls(cmd, callback);
     }
     else if (cmd == ":exit") {
         process.exit();
     }
+    else if (cmd.substring(0, 9) == ":web-port") {
+        cmd_webport(cmd, callback);
+    }
     else if (cmd.substring(0, 4) == ":web") {
-        var search = cmd.substring(4).trim();
-        if (search == "") {
-            search = self.lastSearch;
-        }
-        if (self.service == undefined) {
-            return callback("Connection not set, use :connect".red.bold);
-        }
-        open("http://" + self.service.host + ":8000/en-US/app/search/search?q=search " + search);
-        return callback("");   
+        cmd_web(cmd, callback);
     }
     else if (cmd.indexOf(":")==0) {
-        return callback("Invalid command, type 'help' to see valid commands".red.bold)
+        return callback("Invalid command, type ':help' to see valid commands".red.bold)
     }
-    if (host == undefined) {
-        return callback("Connection not set, use :connect".red.bold);
+    else {
+        doQuery(cmd, callback);
     }
-    doQuery(cmd, callback);
 }
 
 function doQuery(query, callback) {
     if (self.service == undefined) {
-        self.service = createService(host, user, pwd);
+        self.service = createService(nconf.get("host"), nconf.get("user"), nconf.get("pwd"));
     }
 
     var search = 'search ' + query;
@@ -232,27 +329,75 @@ function doQuery(query, callback) {
         }]
     , function(err) {
         if (err) {
-            if (err.error.code != undefined && err.error.code === "ECONNREFUSED") {
-                return callback("Error: Connection refused".red.bold);
-            }
-            return callback(JSON.stringify(err,null,2).red.bold);
+            handleError(err, callback);
         }
         return callback(" ");
     });    
 }
 
-if (query != undefined) {
-    eval(query,null,null,function(result) {
-        console.log(result);;
-    });
+function handleError(err, callback) {
+    if (err.status == "401") {
+        return callback("\r\nInvalid username or password".red.bold);
+    } 
+    else if (err.status == "600") {
+        return callback("\r\nConnection refused, check Splunk is started and the port is correct".red.bold)
+    }
+    return callback(JSON.stringify(err,null,2).red.bold);    
 }
-else {
-    var local = repl.start({
-        "prompt":hosted == true ? "" : "spl query>".green,
-        "eval":eval
-    });
-    if (hosted) 
-    {
-        process.stdout.write("spl query>".green);
+
+function getGlobalConfigPath() {
+    if (process.platform != 'win32') {
+        return path.resolve(process.env.HOME, ".splunkrepl");
+    }
+    else {
+        return path.resolve(process.env.HOMEPATH, ".splunkrepl");
     }
 }
+
+function initializeConfig() {
+    self.host = argv.host == undefined ? "localhost" : argv.host;
+    self.user = argv.user == undefined ? "admin" : argv.user;
+    self.pwd = argv.pwd == undefined ? "changeme" : argv.pwd;
+    self.port = 8089;
+    self.webport = 8000;
+
+    self.configPath = getGlobalConfigPath();
+    nconf.file({ file: self.configPath});
+
+    setDefault('port', self.port);
+    setDefault('webport', self.webport);
+    setDefault('host', self.host);
+    setDefault('user', self.user);
+    setDefault('pwd', self.pwd);
+    setDefault('scheme', 'https');
+}
+
+function setDefault(key, value) {
+    if (nconf.get(key) == undefined) {
+        nconf.set(key, value);
+    }
+}
+
+function setupEnvironment() {
+    if (query != undefined) {
+        eval(query,null,null,function(result) {
+            console.log(result);;
+        });
+    }
+    else {
+        process.stdout.write("Welcome to splunkrepl. Type ':help' to list commands\r\n\r\n".white.bold);
+        var local = repl.start({
+            "prompt":hosted == true ? "" : "spl query>".green,
+            "eval":eval
+        });
+        if (hosted) 
+        {
+            process.stdout.write("spl query>".green);
+        }
+    }
+}
+
+initializeConfig();
+checkArgs();
+setupEnvironment();
+
