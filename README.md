@@ -44,7 +44,7 @@ query    | Optional. Specifies the query to send to Splunk. Will default to the 
 * `:web * | head 10`
 
 ##### :set
-Stores a command using the specified key.
+Stores a command in memory using the specified key. splunkrepl allows you to store an arbitrary number of commands which you can retrieve for later use. The commands are automatically loaded on startup from the `.splunkrepl` file in the home directory.
 
 Argument | Description
 -------- | --------------
@@ -75,6 +75,9 @@ will result in the query `* | head 10` immediately being executed.
 
 ##### :list
 Lists all key/values from configuration.
+
+##### :save
+Saves all commands to the `.splunkrepl` file. If you do not save changes they will be discarded when you exit the REPL.
 
 ### Non-Interactive
 * Run "splunkrepl" at the terminal, passing in required params of `--host`, `--user` and `--pwd` and also passing `--query`
