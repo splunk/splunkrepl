@@ -1,18 +1,23 @@
 {
   "name": "splunkrepl",
-  "version": "0.2.3",
+  "version": "0.8.0",
   "description": "a node repl for sending SPL queries to Splunk",
   "author": "Glenn Block",
-  "license": "Apache 2",
+  "license": "Apache-2.0",
   "dependencies": {
     "cli-table": "^0.3.1",
     "colors": "~1.1.2",
     "minimist": "~1.1.2",
+    "nconf": "^0.7.2",
     "open": "0.0.5",
     "prettyjson": "~1.1.2",
     "splunk-sdk": "~1.7.1"
   },
   "bin": {
     "splunkrepl": "splunkrepl"
+  }
+  "repository" : { 
+    "type" : "git",
+    "url" : "https://github.com/splunk/splunkrepl.git"
   }
 }
