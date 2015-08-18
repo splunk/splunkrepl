@@ -19,3 +19,13 @@
 
 ## 0.2.4
 * Added :web (#10)
+
+## 0.8.0
+* Added :web-port
+* Added conf system, :get, :set, :list
+* Added overridable defaults using the .conf system
+
+## 0.8.1
+* Added fix for :help undefined bug
+
+
