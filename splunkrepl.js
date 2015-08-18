@@ -198,7 +198,7 @@ function eval(cmd, context, filename, callback) {
     cmd = cmd.substring(0, cmd.length -1);
 
     if (cmd === "?" || cmd === ":help") {
-        cmd_help();
+        cmd_help(callback);
     }
     else if (cmd.substring(0, 8) == ":connect" ) {
         cmd_connect(cmd, callback);
