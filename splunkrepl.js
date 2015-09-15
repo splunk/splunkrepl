@@ -273,7 +273,7 @@ function doQuery(query, callback) {
 }
 
 function outputResults(results) {
-    if (results.rows.length == 0) {
+    if (!results || !results.rows || results.rows.length == 0) {
         if (useJson) {
             console.log("[]");
             return;
