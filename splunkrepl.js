@@ -10,12 +10,15 @@ var repl = require("repl")
  , Table = require('cli-table')
  , nconf = require('nconf');
 
+var r; //repl instance
+var prompt = 'spl query'; //default prompt label
 var self = this;
 var argv = require('minimist')(process.argv.slice(2));
 var query = argv.query;
 var verbose = argv.verbose;
 var hosted = argv.hosted;
 var useJson = argv.json;
+var realtimeState = {};
 
 function checkArgs() {
     var firstParam = process.argv[2];
@@ -65,6 +68,7 @@ function cmd_help(callback) {
     console.log("  :connect (host) (user) (pwd) - set the connection.\r\n    example - :connect https://localhost:8089 admin changeme".white.bold);
     console.log("  :web (query) - sends a query to the Splunk UI. If query is not specified, uses the last query".white.bold);
     console.log("  :web-port [port] - specify the default web port to use\r\n    example - :web-port 9000".white.bold);
+    console.log("  :rt [query] - starts a real-time search using the specified query".white.bold);
     console.log("  :get [key] - retrieves [key] from global config and executes it".white.bold);
     console.log("  :set - [key] [value] sets the key in the global config".white.bold);
     console.log("  :save - persists any in memory changes to the global config".white.bold);
@@ -187,13 +191,15 @@ function cmd_web(cmd, callback) {
 }
 
 function eval(cmd, context, filename, callback) {
-    cb = callback;
-    callback = function(msg) {
-        if (msg != undefined) {
-            console.log(msg);
+    var cb = callback;
+    callback = function (msg) {
+        msg = msg != undefined ? msg : '';
+        if (cb) {
+            cb(msg);
+        } else {
+            console.log(msg)
         }
-        process.stdout.write("spl query>".green);
-    }
+    };
 
     cmd = cmd.substring(0, cmd.length -1);
 
@@ -219,13 +225,21 @@ function eval(cmd, context, filename, callback) {
         cmd_cls(cmd, callback);
     }
     else if (cmd == ":exit") {
-        process.exit();
+        if (realtimeState.running) {
+            realtimeState.stop();
+            callback(" ");
+        } else {
+            replExit();
+        }
     }
     else if (cmd.substring(0, 9) == ":web-port") {
         cmd_webport(cmd, callback);
     }
     else if (cmd.substring(0, 4) == ":web") {
         cmd_web(cmd, callback);
+    }
+    else if (cmd.substring(0, 3) == ":rt") {
+        doQuery(cmd.substring(3), callback, true);
     }
     else if (cmd.indexOf(":")==0) {
         return callback("Invalid command, type ':help' to see valid commands".red.bold)
@@ -235,7 +249,7 @@ function eval(cmd, context, filename, callback) {
     }
 }
 
-function doQuery(query, callback) {
+function doQuery(query, callback, realtime) {
     if (self.service == undefined) {
         self.service = createService(nconf.get("host"), nconf.get("user"), nconf.get("pwd"));
     }
@@ -243,33 +257,90 @@ function doQuery(query, callback) {
     var search = 'search ' + query;
     self.lastSearch = query;
     Async.chain([
-        function(done) {
-            self.service.login(done);
-        },
-        function(success, done) {
-            self.service.search(search, {}, done);
-        },
-        function (job, done) {
-            job.track({}, {
-                done: function (job) {
-                    job.results({}, function (err, results, job) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            outputResults(results);
+            function (done) {
+                self.service.login(done);
+            },
+            function (success, done) {
+                searchParams = realtime ? {
+                    earliest_time: 'rt',
+                    latest_time: 'rt'
+                } : {};
+                self.service.search(search, searchParams, done);
+            },
+            function (job, done) {
+                if (realtime) {
+                    //cancel currently running real-time search (if there is one)
+                    if (realtimeState.running) {
+                        realtimeState.stop();
+                    }
+
+                    //a local flag is needed because using the global state object confuses the loop below
+                    var localRunning = true;
+                    realtimeState = {
+                        'running': true,
+                        'resultIndex': 0,
+                        'stop': function (cb) {
+                            realtimeState.running = localRunning = false;
+                            job.finalize(cb);
+                            console.log('Finalized current real-time search.'.yellow.bold);
+                            setPrompt();
                         }
-                        done(err);
+                    };
+
+                    setPrompt('rt');
+                    //continuously poll the job for new results – until the local running flag indicates otherwise
+                    Async.whilst(
+                        function () {
+                            return localRunning;
+                        },
+                        function (cb) {
+                            job.preview({offset: realtimeState.resultIndex}, function (err, results) {
+                                if (err) {
+                                    console.log(err);
+                                    realtimeState.stop();
+                                    cb();
+                                    return;
+                                }
+
+                                if (results.rows && results.rows.length > 0) {
+                                    if (realtimeState.resultIndex == 0) {
+                                        console.log(); //intentional formatting
+                                    }
+                                    outputResults(results);
+                                    realtimeState.resultIndex += results.rows.length;
+                                }
+
+                                Async.sleep(1000, function () {
+                                    cb();
+                                });
+                            });
+                        }
+                    );
+
+                    console.log('Started real-time search. Enter :exit to end search.'.yellow.bold);
+                    done();
+                } else {
+                    job.track({}, {
+                        done: function (job) {
+                            job.results({}, function (err, results, job) {
+                                if (err) {
+                                    console.log(err);
+                                } else {
+                                    outputResults(results);
+                                }
+                                done(err);
+                            });
+                        }
                     });
                 }
-            });
+            }],
+        function (err) {
+            if (err) {
+                handleError(err, callback);
+            }
+            return callback(" ");
         }
-    ]
-    , function(err) {
-        if (err) {
-            handleError(err, callback);
-        }
-        return callback(" ");
-    });    
+    );
 }
 
 function outputResults(results) {
@@ -388,6 +459,21 @@ function setDefault(key, value) {
     }
 }
 
+function setPrompt(mode) {
+    var formattedPrompt = (prompt + (mode == 'rt' ? ' (RT)>' : '>')).green;
+    r.setPrompt(hosted == true ? '' : formattedPrompt);
+}
+
+function replExit() {
+    if (realtimeState.running) {
+        realtimeState.stop(function () {
+            process.exit();
+        });
+    } else {
+        process.exit();
+    } 
+}
+
 function setupEnvironment() {
     if (query != undefined) {
         eval(query,null,null,function(result) {
@@ -396,13 +482,14 @@ function setupEnvironment() {
     }
     else {
         process.stdout.write("Welcome to splunkrepl. Type ':help' to list commands\r\n\r\n".white.bold);
-        var local = repl.start({
-            "prompt":hosted == true ? "" : "spl query>".green,
-            "eval":eval
+        r = repl.start({
+            "eval": eval,
+            "prompt": hosted == true ? "" : (prompt + ">").green, //calling setPrompt immediately doesn't work
+            "writer": undefined //disable default (inspect) output
         });
-        if (hosted) 
-        {
-            process.stdout.write("spl query>".green);
+        r.on('exit', replExit); //enable custom exit handler to stop running real-time searches
+        if (hosted) {
+            process.stdout.write((prompt + ">").green);
         }
     }
 }
