@@ -249,12 +249,21 @@ function doQuery(query, callback) {
         function(success, done) {
             self.service.search(search, {}, done);
         },
-        function(job, done) {
-            job.track({}, function(job) {
-                job.results({}, done);
+        function (job, done) {
+            job.track({}, {
+                done: function (job) {
+                    job.results({}, function (err, results, job) {
+                        if (err) {
+                            console.log(err);
+                        } else {
+                            outputResults(results);
+                        }
+                        done(err);
+                    });
+                }
             });
-        },
-        outputResults]
+        }
+    ]
     , function(err) {
         if (err) {
             handleError(err, callback);
@@ -263,14 +272,14 @@ function doQuery(query, callback) {
     });    
 }
 
-function outputResults(results, job, done) {
+function outputResults(results) {
     if (results.rows.length == 0) {
         if (useJson) {
             console.log("[]");
-            return done();
+            return;
         }
         console.log("-- NO RESULTS --".yellow);
-        return done();
+        return;
     }
     var fields={};
 
@@ -334,7 +343,6 @@ function outputResults(results, job, done) {
     if (isStats) {
         console.log(table.toString());
     }
-    done();
 }
 
 function handleError(err, callback) {
