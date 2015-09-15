@@ -254,85 +254,87 @@ function doQuery(query, callback) {
                 job.results({}, done);
             });
         },
-        function(results, job, done) {
-            if (results.rows.length == 0) {
-                if (useJson) {
-                    console.log("[]");
-                    return done();
-                }
-                console.log("-- NO RESULTS --".yellow);
-                return done();
-            }
-            var fields={};
-            
-            var isStats = results.fields.indexOf("_raw") === -1;
-            if (!isStats) {
-                fields["_time"] = results.fields.indexOf("_time");
-            }
-            results.fields.forEach(function(fieldName, index) {
-                if (fieldName != "_time")
-                    fields[fieldName] = index;
-            });
-   
-            if (!verbose) {
-                delete fields['_bkt'];
-                delete fields['_si'];
-                delete  fields['_cd'];
-                delete fields['_indextime'];
-                delete fields['_serial'];
-                delete fields['linecount'];
-                delete fields['_sourcetype'];
-                delete fields['splunk_server'];
-            }
-            var head = [];
-
-            for (var fieldName in fields) {
-                head.push(fieldName.cyan.bold);
-            }
-
-            var table = new Table({head:head});
-
-            var events=[];
-
-            results.rows.forEach(function(result){
-                var event = {};
-                var vals = [];
-                for(var fieldName in fields) {
-                    if(isStats) {
-                        var val = result[fields[fieldName]] || '';
-                        vals.push(val.white.bold); 
-                    }
-                    event[fieldName] = result[fields[fieldName]];
-                }
-                if (useJson) {
-                    events.push(event);
-                }
-                else {
-                    if (isStats)
-                    {
-                        table.push(vals);
-                    }
-                    else 
-                    {
-                        console.log("\n" + prettyjson.render(event));
-                        console.log("---------------------------------------------".grey);
-                    }
-                }
-            });
-            if (useJson & events.length > 0) {
-                console.log(JSON.stringify(events, null, 2));
-            }
-            if (isStats) {
-                console.log(table.toString());
-            }
-            done();
-        }]
+        outputResults]
     , function(err) {
         if (err) {
             handleError(err, callback);
         }
         return callback(" ");
     });    
+}
+
+function outputResults(results, job, done) {
+    if (results.rows.length == 0) {
+        if (useJson) {
+            console.log("[]");
+            return done();
+        }
+        console.log("-- NO RESULTS --".yellow);
+        return done();
+    }
+    var fields={};
+
+    var isStats = results.fields.indexOf("_raw") === -1;
+    if (!isStats) {
+        fields["_time"] = results.fields.indexOf("_time");
+    }
+    results.fields.forEach(function(fieldName, index) {
+        if (fieldName != "_time")
+            fields[fieldName] = index;
+    });
+
+    if (!verbose) {
+        delete fields['_bkt'];
+        delete fields['_si'];
+        delete  fields['_cd'];
+        delete fields['_indextime'];
+        delete fields['_serial'];
+        delete fields['linecount'];
+        delete fields['_sourcetype'];
+        delete fields['splunk_server'];
+    }
+    var head = [];
+
+    for (var fieldName in fields) {
+        head.push(fieldName.cyan.bold);
+    }
+
+    var table = new Table({head:head});
+
+    var events=[];
+
+    results.rows.forEach(function(result){
+        var event = {};
+        var vals = [];
+        for(var fieldName in fields) {
+            if(isStats) {
+                var val = result[fields[fieldName]] || '';
+                vals.push(val.white.bold);
+            }
+            event[fieldName] = result[fields[fieldName]];
+        }
+        if (useJson) {
+            events.push(event);
+        }
+        else {
+            if (isStats)
+            {
+                table.push(vals);
+            }
+            else
+            {
+                console.log("\n" + prettyjson.render(event));
+                console.log("---------------------------------------------".grey);
+            }
+        }
+    });
+    if (useJson & events.length > 0) {
+        console.log(JSON.stringify(events, null, 2));
+    }
+    if (isStats) {
+        console.log(table.toString());
+    }
+    done();
 }
 
 function handleError(err, callback) {
