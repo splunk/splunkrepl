@@ -277,17 +277,17 @@ function doQuery(query, callback, realtime) {
                     //a local flag is needed because using the global state object confuses the loop below
                     var localRunning = true;
                     realtimeState = {
-                        'running': true,
-                        'resultIndex': 0,
-                        'stop': function (cb) {
+                        callback: done, //will be called on RT search end
+                        running: true,
+                        resultIndex: 0,
+                        stop: function (cb) {
                             realtimeState.running = localRunning = false;
                             job.finalize(cb);
                             console.log('Finalized current real-time search.'.yellow.bold);
-                            setPrompt();
+                            this.callback();
                         }
                     };
 
-                    setPrompt('rt');
                     //continuously poll the job for new results – until the local running flag indicates otherwise
                     Async.whilst(
                         function () {
@@ -317,8 +317,8 @@ function doQuery(query, callback, realtime) {
                         }
                     );
 
-                    console.log('Started real-time search. Enter :exit to end search.'.yellow.bold);
-                    done();
+                    console.log('Started real-time search. Press any key to end search.'.yellow.bold);
+                    //note that done() is deliberately not called here
                 } else {
                     job.track({}, {
                         done: function (job) {
@@ -459,38 +459,43 @@ function setDefault(key, value) {
     }
 }
 
-function setPrompt(mode) {
-    var formattedPrompt = (prompt + (mode == 'rt' ? ' (RT)>' : '>')).green;
-    r.setPrompt(hosted == true ? '' : formattedPrompt);
-}
-
 function replExit() {
+    //RT searches are ended on key press, but ctrl+d exits the
+    // repl while ignoring the keypress handler - deal with this here
     if (realtimeState.running) {
         realtimeState.stop(function () {
             process.exit();
         });
     } else {
         process.exit();
-    } 
+    }
 }
 
 function setupEnvironment() {
     if (query != undefined) {
-        eval(query,null,null,function(result) {
-            console.log(result);;
+        eval(query, null, null, function (result) {
+            console.log(result);
         });
     }
     else {
         process.stdout.write("Welcome to splunkrepl. Type ':help' to list commands\r\n\r\n".white.bold);
         r = repl.start({
             "eval": eval,
-            "prompt": hosted == true ? "" : (prompt + ">").green, //calling setPrompt immediately doesn't work
+            "prompt": hosted == true ? "" : (prompt + ">").green,
             "writer": undefined //disable default (inspect) output
+            //TODO: check if ignoreUndefined just creates an empty output line or removes it completely
         });
         r.on('exit', replExit); //enable custom exit handler to stop running real-time searches
+
         if (hosted) {
             process.stdout.write((prompt + ">").green);
         }
+
+        process.stdin.on('keypress', function () {
+            if (realtimeState.running) {
+                realtimeState.stop();
+            }
+        });
     }
 }
 
