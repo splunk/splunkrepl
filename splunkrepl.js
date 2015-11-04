@@ -195,7 +195,7 @@ function eval(cmd, context, filename, callback) {
         process.stdout.write("spl query>".green);
     }
 
-    cmd = cmd.substring(0, cmd.length -1);
+    cmd = cmd.trim();
 
     if (cmd === "?" || cmd === ":help") {
         cmd_help(callback);
