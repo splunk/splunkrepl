@@ -8,7 +8,8 @@ var repl = require("repl")
  , Async = splunk.Async
  , colors = require('colors')
  , Table = require('cli-table')
- , nconf = require('nconf');
+ , nconf = require('nconf')
+ , ImageToAscii = require('image-to-ascii');
 
 var self = this;
 var argv = require('minimist')(process.argv.slice(2));
@@ -397,7 +398,16 @@ function setupEnvironment() {
     }
 }
 
-initializeConfig();
-checkArgs();
-setupEnvironment();
+ImageToAscii({path: __dirname + "/splunk_logo.png", size:{height: 10}}, function(err, converted) {
+    // Show the Splunk logo, only if graphicsmagick is installed
+    if (!err) {
+        console.log(converted);
+    }
+    // If there's an error, ignore it and don't try to show the logo
+    
+    initializeConfig();
+    checkArgs();
+    setupEnvironment();
+});
+
 
