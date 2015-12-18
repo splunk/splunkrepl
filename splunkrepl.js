@@ -398,16 +398,9 @@ function setupEnvironment() {
     }
 }
 
-ImageToAscii({path: __dirname + "/splunk_logo.png", size:{height: 10}}, function(err, converted) {
-    // Show the Splunk logo, only if graphicsmagick is installed
-    if (!err) {
-        console.log(converted);
-    }
-    // If there's an error, ignore it and don't try to show the logo
-    
-    initializeConfig();
-    checkArgs();
-    setupEnvironment();
-});
+// Show the Splunk logo
+console.log(fs.readFileSync(path.join(__dirname, "splunk_logo_ansi.txt")).toString());
 
-
+initializeConfig();
+checkArgs();
+setupEnvironment();
