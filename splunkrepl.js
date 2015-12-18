@@ -397,7 +397,9 @@ function setupEnvironment() {
     }
 }
 
+// Show the Splunk logo
+console.log(fs.readFileSync(path.join(__dirname, "splunk_logo_ansi.txt")).toString());
+
 initializeConfig();
 checkArgs();
 setupEnvironment();
-
