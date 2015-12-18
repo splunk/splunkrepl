@@ -8,8 +8,7 @@ var repl = require("repl")
  , Async = splunk.Async
  , colors = require('colors')
  , Table = require('cli-table')
- , nconf = require('nconf')
- , ImageToAscii = require('image-to-ascii');
+ , nconf = require('nconf');
 
 var self = this;
 var argv = require('minimist')(process.argv.slice(2));
